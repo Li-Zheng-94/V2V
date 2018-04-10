@@ -49,6 +49,7 @@ class Vehicle(Interface):
 
         self.__x_point = -1
         self.__y_point = -1
+        self.__allocated_RB = []
 
     def set_location(self, x_point, y_point):
         self.__x_point = x_point
@@ -63,6 +64,12 @@ class Vehicle(Interface):
     def get_direction(self):
         return self.__direction
 
+    def set_allocated_rb(self, rb_id):
+        self.__allocated_RB.append(rb_id)
+
+    def get_allocated_rb(self):
+        return self.__allocated_RB
+
 
 class V2IVehicle(Vehicle):
     def __init__(self, i_id):
@@ -70,6 +77,7 @@ class V2IVehicle(Vehicle):
         Vehicle.__init__(self, i_id)
         self.__txID = 0
         self.__inter_txID2weight = {}  # 存储干扰权值的字典 键——干扰发射机ID 值——干扰权值
+        self.__sinr = 0
 
     def update_location(self, highway):
         # 随机生成车辆位置
@@ -103,13 +111,48 @@ class V2IVehicle(Vehicle):
     def get_weight(self, tx_id):
         return self.__inter_txID2weight[tx_id]
 
+    def comp_sinr(self, dict_id2tx, dict_id2channel):  # 计算接收 SINR
+        if len(self.get_allocated_rb()):
+            # 计算噪声功率  1个RB, 12个连续的载波, 12 * 15000 = 180000Hz
+            white_noise = -174  # -174dBm / Hz
+            noise_fig = 5  # dB
+            noise_fig = pow(10, noise_fig / 10)  # 线性值
+            thermalNoisePow = pow(10, (white_noise - 30) / 10) * 180000 * noise_fig  # 线性值
+
+            # 计算接收目标信号功率
+            target_tx = dict_id2tx[self.__txID]  # 目标发射机
+            target_power = target_tx.get_power()  # dBm
+            target_power = pow(10, (target_power - 30) / 10)  # W
+            target_channel = dict_id2channel[self.get_id()]
+            target_link_loss = target_channel.get_link_loss(self.__txID)  # dB
+            target_gain = pow(10, -target_link_loss / 10)
+            receive_target_power = target_power * target_gain
+
+            # 计算接收干扰信号总功率
+            receive_inter_power = 0
+            for tx_id in dict_id2tx:
+                if tx_id != self.__txID:
+                    if self.get_allocated_rb()[0] in dict_id2tx[tx_id].get_allocated_rb():
+                        inter_tx = dict_id2tx[tx_id]  # 干扰发射机
+                        inter_power = inter_tx.get_power()  # dBm
+                        inter_power = pow(10, (inter_power - 30) / 10)  # W
+                        inter_channel = dict_id2channel[self.get_id()]
+                        inter_link_loss = inter_channel.get_link_loss(tx_id)  # dB
+                        inter_gain = pow(10, -inter_link_loss / 10)
+                        receive_inter_power += inter_power * inter_gain
+
+            self.__sinr = 10 * math.log10(receive_target_power / (receive_inter_power + thermalNoisePow))
+
+    def get_sinr(self):
+        return self.__sinr
+
 
 class V2VTxVehicle(Vehicle):
     def __init__(self, i_id):
         # 调用父类的构造函数
         Vehicle.__init__(self, i_id)
         self.__rxID = -1
-        self.__power = 30  # 车辆发射功率 dBm
+        self.__power = 5  # 车辆发射功率 dBm
 
     def update_location(self, highway):
         # 随机生成车辆位置
@@ -132,10 +175,11 @@ class V2VRxVehicle(Vehicle):
         Vehicle.__init__(self, i_id)
         self.__txID = -1
         self.__inter_txID2weight = {}  # 存储干扰权值的字典 键——干扰发射机ID 值——干扰权值
+        self.__sinr = 0
 
     def update_location(self, highway, v2v_tx_vehicle):
-        temp_x = (random.random() - 0.5) * 500  # 设 V2V 之间最大间距500m
-        temp_y = (random.random() - 0.5) * 500
+        temp_x = (random.random() - 0.5) * 10  # 设 V2V 之间最大间距500m
+        temp_y = (random.random() - 0.5) * 10
         if highway.get_end_x_point() - highway.get_start_x_point():
             x_point = v2v_tx_vehicle.get_x_point() + temp_x
             y_point = v2v_tx_vehicle.get_y_point()
@@ -171,15 +215,51 @@ class V2VRxVehicle(Vehicle):
     def get_weight(self, tx_id):
         return self.__inter_txID2weight[tx_id]
 
+    def comp_sinr(self, dict_id2tx, dict_id2channel):  # 计算接收 SINR
+        if len(self.get_allocated_rb()):
+            # 计算噪声功率  1个RB, 12个连续的载波, 12 * 15000 = 180000Hz
+            white_noise = -174  # -174dBm / Hz
+            noise_fig = 5  # dB
+            noise_fig = pow(10, noise_fig / 10)  # 线性值
+            thermalNoisePow = pow(10, (white_noise - 30) / 10) * 180000 * noise_fig  # 线性值
+
+            # 计算接收目标信号功率
+            target_tx = dict_id2tx[self.__txID]  # 目标发射机
+            target_power = target_tx.get_power()  # dBm
+            target_power = pow(10, (target_power - 30) / 10)  # W
+            target_channel = dict_id2channel[self.get_id()]
+            target_link_loss = target_channel.get_link_loss(self.__txID)  # dB
+            target_gain = pow(10, -target_link_loss / 10)
+            receive_target_power = target_power * target_gain
+
+            # 计算接收干扰信号总功率
+            receive_inter_power = 0
+            for tx_id in dict_id2tx:
+                if tx_id != self.__txID:
+                    if self.get_allocated_rb()[0] in dict_id2tx[tx_id].get_allocated_rb():
+                        inter_tx = dict_id2tx[tx_id]  # 干扰发射机
+                        inter_power = inter_tx.get_power()  # dBm
+                        inter_power = pow(10, (inter_power - 30) / 10)  # W
+                        inter_channel = dict_id2channel[self.get_id()]
+                        inter_link_loss = inter_channel.get_link_loss(tx_id)  # dB
+                        inter_gain = pow(10, -inter_link_loss / 10)
+                        receive_inter_power += inter_power * inter_gain
+
+            self.__sinr = 10 * math.log10(receive_target_power / (receive_inter_power + thermalNoisePow))
+
+    def get_sinr(self):
+        return self.__sinr
+
 
 class RSU(Interface):
     def __init__(self, i_id):
         # 调用父类的构造函数
         Interface.__init__(self, i_id)
-        self.__power = 40  # 发射功率 dBm
+        self.__power = 20  # 发射功率 dBm
         self.__x_point = 0
         self.__y_point = 0
         self.__direction = 0  # 路边单元静止 没有行进方向
+        self.__allocated_RB = []
 
     def get_x_point(self):
         return self.__x_point
@@ -192,6 +272,12 @@ class RSU(Interface):
 
     def get_power(self):
         return self.__power
+
+    def set_allocated_rb(self, rb_id):
+        self.__allocated_RB.append(rb_id)
+
+    def get_allocated_rb(self):
+        return self.__allocated_RB
 
 
 class Channel(object):

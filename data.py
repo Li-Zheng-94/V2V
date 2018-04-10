@@ -38,30 +38,32 @@ class Data(object):
             self.__inter_class = 2
 
     def print2csv(self):
-        # 带有列名和行号
-        file_name1 = "data_" + str(self.__time_index) + ".csv"
-        with open(file_name1, "ab") as csv_file1:
-            writer = csv.writer(csv_file1)
-            if self.__index == 1:
-                writer.writerow(["index", "tx_id", "rx_id", "highway", "suburban", "urban",
-                                 "t_reverse", "t_forward", "t_convoy", "i_reverse", "i_forward", "i_convoy",
-                                 "target_distance", "inter_distance",
-                                 "target_power", "inter_power", "weight", "inter_class"])
-            writer.writerow([self.__index, self.__tx_id, self.__rx_id,
-                             self.__highway, self.__suburban, self.__urban,
-                             self.__t_reverse, self.__t_forward, self.__t_convoy,
-                             self.__i_reverse, self.__i_forward, self.__i_convoy,
-                             self.__target_distance, self.__inter_distance,
-                             self.__target_power, self.__inter_power, self.__weight, self.__inter_class])
-        csv_file1.close()
+        # # 带有列名和行号
+        # file_name1 = "data_" + str(self.__time_index) + ".csv"
+        # with open(file_name1, "ab") as csv_file1:
+        #     writer = csv.writer(csv_file1)
+        #     if self.__index == 1:
+        #         writer.writerow(["index", "tx_id", "rx_id", "highway", "suburban", "urban",
+        #                          "t_reverse", "t_forward", "t_convoy", "i_reverse", "i_forward", "i_convoy",
+        #                          "target_distance", "inter_distance",
+        #                          "target_power", "inter_power", "weight", "inter_class"])
+        #     writer.writerow([self.__index, self.__tx_id, self.__rx_id,
+        #                      self.__highway, self.__suburban, self.__urban,
+        #                      self.__t_reverse, self.__t_forward, self.__t_convoy,
+        #                      self.__i_reverse, self.__i_forward, self.__i_convoy,
+        #                      self.__target_distance, self.__inter_distance,
+        #                      self.__target_power, self.__inter_power, self.__weight, self.__inter_class])
+        # csv_file1.close()
 
         # 纯数据 无列名和行号
-        file_name2 = "data_pure_" + str(self.__time_index) + ".csv"
+        # file_name2 = "data_pure_" + str(self.__time_index) + ".csv"
+        file_name2 = "testData.csv"
         with open(file_name2, "ab") as csv_file2:
             writer = csv.writer(csv_file2)
             writer.writerow([self.__highway, self.__suburban, self.__urban,
                              self.__t_reverse, self.__t_forward, self.__t_convoy,
                              self.__i_reverse, self.__i_forward, self.__i_convoy,
                              self.__target_distance, self.__inter_distance,
-                             self.__target_power, self.__inter_power, self.__weight, self.__inter_class])
+                             self.__target_power, self.__inter_power, self.__weight, self.__inter_class,
+                             self.__tx_id, self.__rx_id, self.__index])
         csv_file2.close()
